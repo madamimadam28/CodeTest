@@ -1,0 +1,14 @@
+C:\PP\URLShortenerImp\bin\Debug\net10.0\URLShortenerImp.exe
+C:\PP\URLShortenerImp\bin\Debug\net10.0\URLShortenerImp.deps.json
+C:\PP\URLShortenerImp\bin\Debug\net10.0\URLShortenerImp.runtimeconfig.json
+C:\PP\URLShortenerImp\bin\Debug\net10.0\URLShortenerImp.dll
+C:\PP\URLShortenerImp\bin\Debug\net10.0\URLShortenerImp.pdb
+C:\PP\URLShortenerImp\obj\Debug\net10.0\URLShortenerImp.GeneratedMSBuildEditorConfig.editorconfig
+C:\PP\URLShortenerImp\obj\Debug\net10.0\URLShortenerImp.AssemblyInfoInputs.cache
+C:\PP\URLShortenerImp\obj\Debug\net10.0\URLShortenerImp.AssemblyInfo.cs
+C:\PP\URLShortenerImp\obj\Debug\net10.0\URLShortenerImp.csproj.CoreCompileInputs.cache
+C:\PP\URLShortenerImp\obj\Debug\net10.0\URLShortenerImp.dll
+C:\PP\URLShortenerImp\obj\Debug\net10.0\refint\URLShortenerImp.dll
+C:\PP\URLShortenerImp\obj\Debug\net10.0\URLShortenerImp.pdb
+C:\PP\URLShortenerImp\obj\Debug\net10.0\URLShortenerImp.genruntimeconfig.cache
+C:\PP\URLShortenerImp\obj\Debug\net10.0\ref\URLShortenerImp.dll
