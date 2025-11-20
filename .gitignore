@@ -1,0 +1,15 @@
+# Build results
+bin/
+obj/
+*.dll
+*.exe
+*.pdb
+
+# IDE
+.vs/
+.vscode/
+*.csproj.user
+
+# Runtime
+*.log
+url_data.json

@@ -1,37 +1,23 @@
-﻿
-using System;
-using System.Collections.Generic;
-using System.Security.Cryptography;
-using System.IO;
-using System.Text.Json;
+﻿using System;
 
 namespace URLShortenerImp
 {
 	class Program
 	{
-		// Character set: a-z, A-Z, 0-9
-		private const string Alphabet = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
-		private const int Base = 62;
-		private const string Domain = "http://short.rl/";
-		private static readonly Dictionary<string, string> urlToShort = new();
-		private static readonly Dictionary<string, string> shortToUrl = new();
-		private static readonly string DataFile = "url_data.json";
-		private static readonly object urlLock = new();
-		private static long counter = 1; // Retained for legacy, but not used for key generation
-		private static readonly int ShortKeyLength = 6; // 62^6 > 56B, enough for 1M unique URLs
+		private static readonly UrlShortenerService _service = new();
 
 		static void Main(string[] args)
 		{
-			LoadData();
-			Console.WriteLine("URL Shortener Console App");
+			_service.Load();
+			Console.WriteLine("========================================");
+			Console.WriteLine("   URL Shortener Console Application");
+			Console.WriteLine("========================================\n");
+
 			while (true)
 			{
-				Console.WriteLine("\nChoose an option:");
-				Console.WriteLine("1. Shorten a URL");
-				Console.WriteLine("2. Retrieve original URL");
-				Console.WriteLine("3. Exit");
-				Console.Write("Enter choice: ");
-				var choice = Console.ReadLine();
+				DisplayMenu();
+				var choice = Console.ReadLine()?.Trim();
+
 				switch (choice)
 				{
 					case "1":
@@ -41,146 +27,87 @@ namespace URLShortenerImp
 						RetrieveUrlFlow();
 						break;
 					case "3":
-						SaveData();
+						ShowStatistics();
+						break;
+					case "4":
+						Exit();
 						return;
 					default:
-						Console.WriteLine("Invalid choice. Try again.");
+						Console.WriteLine("❌ Invalid choice. Please try again.\n");
 						break;
 				}
 			}
 		}
 
+		private static void DisplayMenu()
+		{
+			Console.WriteLine("\nChoose an option:");
+			Console.WriteLine("  1. Shorten a URL");
+			Console.WriteLine("  2. Retrieve original URL");
+			Console.WriteLine("  3. View statistics");
+			Console.WriteLine("  4. Exit");
+			Console.Write("\nEnter choice: ");
+		}
+
 		private static void ShortenUrlFlow()
 		{
-			Console.Write("Enter the original URL: ");
+			Console.Write("\nEnter the original URL: ");
 			var originalUrl = Console.ReadLine();
+
 			if (string.IsNullOrWhiteSpace(originalUrl))
 			{
-				Console.WriteLine("URL cannot be empty.");
+				Console.WriteLine("❌ URL cannot be empty.\n");
 				return;
 			}
 
-			string shortKey = string.Empty;
-			lock (urlLock)
+			var shortKey = _service.ShortenUrl(originalUrl);
+			if (shortKey != null)
 			{
-				if (urlToShort.ContainsKey(originalUrl))
-				{
-					shortKey = urlToShort[originalUrl];
-				}
-				else
-				{
-					int maxAttempts = 10;
-					int attempt = 0;
-					do
-					{
-						shortKey = GenerateRandomShortKey(ShortKeyLength);
-						attempt++;
-					} while (shortToUrl.ContainsKey(shortKey) && attempt < maxAttempts);
-
-					if (shortToUrl.ContainsKey(shortKey))
-					{
-						Console.WriteLine("Failed to generate a unique short URL. Please try again.");
-						return;
-					}
-
-					urlToShort[originalUrl] = shortKey;
-					shortToUrl[shortKey] = originalUrl;
-					SaveData();
-				}
+				var fullUrl = _service.GetFullShortUrl(shortKey);
+				Console.WriteLine($"✅ Short URL: {fullUrl}\n");
 			}
-			Console.WriteLine($"Short URL: {Domain}{shortKey}");
-				// Save mappings to disk
-				private static void SaveData()
-				{
-					lock (urlLock)
-					{
-						var data = new UrlData
-						{
-							UrlToShort = urlToShort,
-							ShortToUrl = shortToUrl
-						};
-						var json = JsonSerializer.Serialize(data);
-						File.WriteAllText(DataFile, json);
-					}
-				}
-
-				// Load mappings from disk
-				private static void LoadData()
-				{
-					lock (urlLock)
-					{
-						if (File.Exists(DataFile))
-						{
-							var json = File.ReadAllText(DataFile);
-							var data = JsonSerializer.Deserialize<UrlData>(json);
-							if (data != null)
-							{
-								urlToShort.Clear();
-								shortToUrl.Clear();
-								foreach (var kv in data.UrlToShort)
-									urlToShort[kv.Key] = kv.Value;
-								foreach (var kv in data.ShortToUrl)
-									shortToUrl[kv.Key] = kv.Value;
-							}
-						}
-					}
-				}
-
-				// Helper class for serialization
-				private class UrlData
-				{
-					public Dictionary<string, string> UrlToShort { get; set; } = new();
-					public Dictionary<string, string> ShortToUrl { get; set; } = new();
-				}
+			else
+			{
+				Console.WriteLine("❌ Failed to generate a unique short URL. Please try again.\n");
+			}
 		}
 
 		private static void RetrieveUrlFlow()
 		{
-			Console.Write("Enter the short URL: ");
+			Console.Write("\nEnter the short URL or short key: ");
 			var input = Console.ReadLine();
+
 			if (string.IsNullOrWhiteSpace(input))
 			{
-				Console.WriteLine("Short URL cannot be empty.");
+				Console.WriteLine("❌ Short URL cannot be empty.\n");
 				return;
 			}
-			var shortKey = input.Replace(Domain, "");
-			if (shortToUrl.TryGetValue(shortKey, out var originalUrl))
+
+			var shortKey = _service.ExtractShortKey(input);
+			var originalUrl = _service.RetrieveUrl(shortKey);
+
+			if (originalUrl != null)
 			{
-				Console.WriteLine($"Original URL: {originalUrl}");
+				Console.WriteLine($"✅ Original URL: {originalUrl}\n");
 			}
 			else
 			{
-				Console.WriteLine("Short URL not found.");
+				Console.WriteLine("❌ Short URL not found.\n");
 			}
 		}
 
-		// Base62 encoding (legacy, not used for random keys)
-		private static string Encode(long num)
+		private static void ShowStatistics()
 		{
-			if (num == 0) return Alphabet[0].ToString();
-			var s = string.Empty;
-			while (num > 0)
-			{
-				s = Alphabet[(int)(num % Base)] + s;
-				num /= Base;
-			}
-			return s;
+			var (totalUrls, uniqueKeys) = _service.GetStatistics();
+			Console.WriteLine($"\n📊 Statistics:");
+			Console.WriteLine($"   Total unique original URLs: {totalUrls}");
+			Console.WriteLine($"   Total short keys generated: {uniqueKeys}\n");
 		}
 
-		// Generate a random short key of given length
-		private static string GenerateRandomShortKey(int length)
+		private static void Exit()
 		{
-			var bytes = new byte[length];
-			using (var rng = RandomNumberGenerator.Create())
-			{
-				rng.GetBytes(bytes);
-			}
-			var chars = new char[length];
-			for (int i = 0; i < length; i++)
-			{
-				chars[i] = Alphabet[bytes[i] % Base];
-			}
-			return new string(chars);
+			_service.Save();
+			Console.WriteLine("\n✅ Data saved. Goodbye!\n");
 		}
 	}
 }
